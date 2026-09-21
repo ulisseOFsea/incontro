@@ -17,8 +17,8 @@ export const Route = createFileRoute("/api/analyze")({
           if (META_KEYS.some((k) => typeof body.meta?.[k] !== "string")) {
             return Response.json({ error: "Metadati non validi." }, { status: 400 });
           }
-          const reports = await analyzeWithXai(body.meta, body.transcript);
-          return Response.json({ reports });
+          const { reports, derived } = await analyzeWithXai(body.meta, body.transcript);
+          return Response.json({ reports, derived });
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Analisi non riuscita.";

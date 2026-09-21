@@ -52,11 +52,16 @@ export async function requestTranscription(
   return text;
 }
 
+export type AnalysisResult = {
+  reports: string[];
+  derived: string[];
+};
+
 export async function requestAnalysis(
   meta: MeetingMeta,
   transcript: string,
   signal: AbortSignal,
-) {
+): Promise<AnalysisResult> {
   const res = await fetch("/api/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -65,9 +70,13 @@ export async function requestAnalysis(
   });
   const body = await readJson(res);
   const reports = Array.isArray(body.reports) ? body.reports : null;
+  const derivedRaw = Array.isArray(body.derived) ? body.derived : [];
   const error = typeof body.error === "string" ? body.error : "";
   if (!res.ok || !reports || reports.some((x) => typeof x !== "string")) {
     throw new Error(error || "Analisi non riuscita.");
   }
-  return reports as string[];
+  return {
+    reports: reports as string[],
+    derived: derivedRaw.map((x) => (typeof x === "string" ? x : "")),
+  };
 }

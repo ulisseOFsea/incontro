@@ -14,6 +14,13 @@ export const REPORT_TITLES = [
 
 export type ReportIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
+export const DERIVED_TITLES = [
+  "Glossario dei termini",
+  "Mappa delle promesse",
+] as const;
+
+export type DerivedIndex = 0 | 1;
+
 export type MeetingMeta = {
   nameA: string;
   emailA: string;
@@ -60,11 +67,14 @@ export const emptyMeta = (): MeetingMeta => ({
 
 export const emptyReports = () => REPORT_TITLES.map(() => "") as string[];
 
+export const emptyDerived = () => DERIVED_TITLES.map(() => "") as string[];
+
 export type MeetingBackup = {
   version: 1;
   meta: MeetingMeta;
   transcript: string;
   report: string[];
+  derived?: string[];
 };
 
 export const STEPS = [
