@@ -1,5 +1,5 @@
 import { formatTranscription } from "@/lib/meeting/transcript-format";
-import { REPORT_TITLES, type MeetingMeta } from "@/lib/meeting/types";
+import { DERIVED_TITLES, REPORT_TITLES, type MeetingMeta } from "@/lib/meeting/types";
 
 const MAX_AUDIO_BYTES = 20_000_000;
 const MAX_TRANSCRIPT_CHARS = 100_000;
@@ -111,13 +111,20 @@ export async function analyzeWithXai(meta: MeetingMeta, transcript: string) {
     );
   }
 
-  const properties = Object.fromEntries(
-    REPORT_TITLES.map((title, i) => [
+  const properties = Object.fromEntries([
+    ...REPORT_TITLES.map((title, i) => [
       `s${i}`,
       { type: "string", description: title },
     ]),
-  );
-  const required = REPORT_TITLES.map((_, i) => `s${i}`);
+    ...DERIVED_TITLES.map((title, i) => [
+      `d${i}`,
+      { type: "string", description: title },
+    ]),
+  ]);
+  const required = [
+    ...REPORT_TITLES.map((_, i) => `s${i}`),
+    ...DERIVED_TITLES.map((_, i) => `d${i}`),
+  ];
 
   const system = `Sei un analista di incontri professionali BNI 1-to-1.
 Produci un report in italiano, concreto e professionale.
@@ -141,7 +148,12 @@ Piano d'azione: una riga per azione con responsabile, scadenza e risultato;
 dati mancanti da concordare.
 Se una sezione non è documentata scrivi Non emerso nell'incontro.
 Non promettere risultati economici.
-Testo semplice senza Markdown, con paragrafi e trattini.`;
+Testo semplice senza Markdown, con paragrafi e trattini.
+Glossario dei termini: elenca solo parole, acronimi o gergo usati nella
+trascrizione, ciascuno con significato breve ricavato dal contesto.
+Mappa delle promesse: chi ha promesso cosa, a chi, entro quando, e se
+l'impegno è [DICHIARATO], [CONCORDATO] o [PROPOSTA AI].
+Dati mancanti: da concordare.`;
 
   let res: Response;
   try {
@@ -204,10 +216,11 @@ Testo semplice senza Markdown, con paragrafi e trattini.`;
     throw new Error("Formato del report non valido.");
   }
   const reports = REPORT_TITLES.map((_, i) => parsed[`s${i}`]);
-  if (reports.some((x) => typeof x !== "string")) {
+  const derived = DERIVED_TITLES.map((_, i) => parsed[`d${i}`]);
+  if (reports.some((x) => typeof x !== "string") || derived.some((x) => typeof x !== "string")) {
     throw new Error("Formato del report non valido.");
   }
-  return reports as string[];
+  return { reports: reports as string[], derived: derived as string[] };
 }
 
 export const LIMITS = { MAX_AUDIO_BYTES, MAX_TRANSCRIPT_CHARS };
