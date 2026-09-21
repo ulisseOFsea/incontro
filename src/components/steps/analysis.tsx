@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { requestAnalysis } from "@/lib/meeting/client-ai";
 import { useMeetingStore } from "@/lib/meeting/store";
 import { logUsage } from "@/lib/meeting/usage";
-import { REPORT_TITLES } from "@/lib/meeting/types";
+import { DERIVED_TITLES, REPORT_TITLES } from "@/lib/meeting/types";
 
 type Props = {
   abortRef: MutableRefObject<AbortController | null>;
@@ -18,6 +18,9 @@ export function AnalysisStep({ abortRef, setBusy, aiAvailable }: Props) {
   const reports = useMeetingStore((s) => s.reports);
   const setReport = useMeetingStore((s) => s.setReport);
   const setReports = useMeetingStore((s) => s.setReports);
+  const derived = useMeetingStore((s) => s.derived);
+  const setDerived = useMeetingStore((s) => s.setDerived);
+  const setDerivedAll = useMeetingStore((s) => s.setDerivedAll);
   const markAnalyzed = useMeetingStore((s) => s.markAnalyzed);
   const transcript = useMeetingStore((s) => s.transcript);
   const meta = useMeetingStore((s) => s.meta);
@@ -39,7 +42,10 @@ export function AnalysisStep({ abortRef, setBusy, aiAvailable }: Props) {
       setNotice("Rivedi interlocutori e trascrizione, poi conferma la verifica.", true);
       return;
     }
-    if (reports.some((r) => r.trim()) && !confirm("Rigenerare e sostituire il report attuale?")) {
+    if (
+      (reports.some((r) => r.trim()) || derived.some((r) => r.trim())) &&
+      !confirm("Rigenerare e sostituire il report attuale?")
+    ) {
       return;
     }
 
@@ -49,7 +55,8 @@ export function AnalysisStep({ abortRef, setBusy, aiAvailable }: Props) {
     setNotice("Analisi dell’incontro e delle opportunità in corso…");
     try {
       const next = await requestAnalysis(meta, text, controller.signal);
-      setReports(next);
+      setReports(next.reports);
+      setDerivedAll(next.derived);
       markAnalyzed();
       setNotice("Analisi pronta. Rivedi le sezioni e conferma il report prima dell’esportazione.");
       logUsage("analisi", "Analisi e opportunità generate");
@@ -111,6 +118,20 @@ export function AnalysisStep({ abortRef, setBusy, aiAvailable }: Props) {
               value={reports[i] ?? ""}
               placeholder="Scrivi qui o genera l’analisi AI."
               onChange={(e) => setReport(i, e.target.value)}
+            />
+          </article>
+        ))}
+        {DERIVED_TITLES.map((title, i) => (
+          <article key={title}>
+            <Label htmlFor={`d${i}`} className="text-accent">
+              {String(REPORT_TITLES.length + i + 1).padStart(2, "0")} · {title}
+            </Label>
+            <Textarea
+              id={`d${i}`}
+              rows={6}
+              value={derived[i] ?? ""}
+              placeholder="Generato dall’AI a partire dal vocabolario e dagli impegni della conversazione."
+              onChange={(e) => setDerived(i, e.target.value)}
             />
           </article>
         ))}

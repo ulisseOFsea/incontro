@@ -1,12 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
+  emptyDerived,
   emptyMeta,
   emptyReports,
   sourceFingerprint,
   type MeetingBackup,
   type MeetingMeta,
   META_KEYS,
+  DERIVED_TITLES,
   REPORT_TITLES,
 } from "./types";
 import { SAMPLE_BACKUP } from "./sample";
@@ -19,6 +21,7 @@ type MeetingState = {
   meta: MeetingMeta;
   transcript: string;
   reports: string[];
+  derived: string[];
   consentRecord: boolean;
   consentCloud: boolean;
   checkedTranscript: boolean;
@@ -33,6 +36,8 @@ type MeetingState = {
   setTranscript: (value: string) => void;
   setReport: (index: number, value: string) => void;
   setReports: (reports: string[]) => void;
+  setDerived: (index: number, value: string) => void;
+  setDerivedAll: (derived: string[]) => void;
   setConsentRecord: (v: boolean) => void;
   setConsentCloud: (v: boolean) => void;
   setCheckedTranscript: (v: boolean) => void;
@@ -53,6 +58,15 @@ const defaultNotice: Notice = {
   error: false,
 };
 
+function normalizeDerived(value?: string[]) {
+  const next = emptyDerived();
+  if (!Array.isArray(value)) return next;
+  for (let i = 0; i < DERIVED_TITLES.length; i++) {
+    next[i] = typeof value[i] === "string" ? value[i] : "";
+  }
+  return next;
+}
+
 export const useMeetingStore = create<MeetingState>()(
   persist(
     (set, get) => ({
@@ -60,6 +74,7 @@ export const useMeetingStore = create<MeetingState>()(
       meta: emptyMeta(),
       transcript: "",
       reports: emptyReports(),
+      derived: emptyDerived(),
       consentRecord: false,
       consentCloud: true,
       checkedTranscript: false,
@@ -93,6 +108,14 @@ export const useMeetingStore = create<MeetingState>()(
           return { reports, dirty: true, reviewedDoc: false };
         }),
       setReports: (reports) => set({ reports, dirty: true, reviewedDoc: false }),
+      setDerived: (index, value) =>
+        set((s) => {
+          const derived = normalizeDerived(s.derived);
+          derived[index] = value;
+          return { derived, dirty: true, reviewedDoc: false };
+        }),
+      setDerivedAll: (derived) =>
+        set({ derived: normalizeDerived(derived), dirty: true, reviewedDoc: false }),
       setConsentRecord: (v) => set({ consentRecord: v }),
       setConsentCloud: () => set({ consentCloud: true }),
       setCheckedTranscript: (v) => set({ checkedTranscript: v }),
@@ -121,6 +144,7 @@ export const useMeetingStore = create<MeetingState>()(
           meta: data.meta,
           transcript: data.transcript,
           reports: data.report.slice(),
+          derived: normalizeDerived(data.derived),
           consentRecord: false,
           checkedTranscript: false,
           reviewedDoc: false,
@@ -139,6 +163,7 @@ export const useMeetingStore = create<MeetingState>()(
           meta: { ...SAMPLE_BACKUP.meta },
           transcript: SAMPLE_BACKUP.transcript,
           reports: SAMPLE_BACKUP.report.slice(),
+          derived: normalizeDerived(SAMPLE_BACKUP.derived),
           consentRecord: true,
           consentCloud: true,
           checkedTranscript: true,
@@ -160,6 +185,7 @@ export const useMeetingStore = create<MeetingState>()(
           meta: emptyMeta(),
           transcript: "",
           reports: emptyReports(),
+          derived: emptyDerived(),
           consentRecord: false,
           consentCloud: true,
           checkedTranscript: false,
@@ -176,6 +202,7 @@ export const useMeetingStore = create<MeetingState>()(
         meta: get().meta,
         transcript: get().transcript,
         report: get().reports,
+        derived: get().derived,
       }),
     }),
     {
@@ -186,6 +213,7 @@ export const useMeetingStore = create<MeetingState>()(
         meta: s.meta,
         transcript: s.transcript,
         reports: s.reports,
+        derived: s.derived,
         consentRecord: s.consentRecord,
         checkedTranscript: s.checkedTranscript,
         reviewedDoc: s.reviewedDoc,
@@ -224,5 +252,6 @@ export function parseBackup(raw: unknown): MeetingBackup {
     },
     transcript: d.transcript,
     report: d.report as string[],
+    derived: normalizeDerived(Array.isArray(d.derived) ? (d.derived as string[]) : []),
   };
 }
