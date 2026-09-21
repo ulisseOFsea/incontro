@@ -24,6 +24,7 @@ export function TranscriptStep({ abortRef, setBusy, aiAvailable }: Props) {
   const meta = useMeetingStore((s) => s.meta);
   const reports = useMeetingStore((s) => s.reports);
   const setReports = useMeetingStore((s) => s.setReports);
+  const setDerivedAll = useMeetingStore((s) => s.setDerivedAll);
   const markAnalyzed = useMeetingStore((s) => s.markAnalyzed);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -62,7 +63,8 @@ export function TranscriptStep({ abortRef, setBusy, aiAvailable }: Props) {
     setNotice("Analisi dell’incontro e delle opportunità in corso…");
     try {
       const next = await requestAnalysis(meta, text, controller.signal);
-      setReports(next);
+      setReports(next.reports);
+      setDerivedAll(next.derived);
       markAnalyzed();
       setNotice("Analisi pronta. Rivedi le sezioni e conferma il report prima dell’esportazione.");
       setStep(3);
